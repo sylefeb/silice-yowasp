@@ -1,0 +1,3 @@
+[submodule "silice-src"]
+	path = silice-src
+	url = https://github.com/sylefeb/Silice.git
