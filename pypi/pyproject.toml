@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools~=67.0", "setuptools_scm~=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+dynamic = ["version"]
+
+name = "yowasp-silice"
+description = "Silice HDL"
+readme = "README.md"
+authors = [{name = "sylefeb", email = "sylain.lefebvre@inria.fr"}]
+license = {text = "ISC"}
+classifiers = [
+	"License :: OSI Approved :: ISC License (ISCL)"
+]
+
+dependencies = [
+	"importlib_resources; python_version<'3.9'",
+	"yowasp-runtime~=1.12"
+]
+
+[project.scripts]
+yowasp-silice = "yowasp_silice:_run_silice_argv"
+yowasp-silice-make = "yowasp_silice:_run_make_argv"
+
+[project.urls]
+"Homepage" = "https://yowasp.org/"
+"Source Code" = "https://github.com/sylefeb/silice-yowasp"
+"Bug Tracker" = "https://github.com/sylefeb/silice-yowasp/issues"
+
+[tool.setuptools.package-data]
+yowasp_silice = ["*.wasm", "*.py", "share/*", "share/**/*", "share/**/**/*", "share/**/**/**/*"]
