@@ -93,20 +93,25 @@ def serve(html_content):
                         self.wfile.write(file_content)
                     except Exception as e:
                         self.send_error(500, f"Internal Server Error: {str(e)}")
-    # make certificates
-    if not os.path.exists('cert.pem'):
+    if False:
+      # make certificates
+      if not os.path.exists('cert.pem'):
         generate_self_signed_cert()
-    # create localhost
-    httpd = http.server.HTTPServer(('localhost', 4443), CustomHTTPRequestHandler)
-    # wrap the server with SSL for HTTPS
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    context.load_cert_chain(certfile="cert.pem", keyfile="key.pem")
-    httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
+      # create localhost
+      httpd = http.server.HTTPServer(('localhost', 4443), CustomHTTPRequestHandler)
+      # wrap the server with SSL for HTTPS
+      context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+      context.load_cert_chain(certfile="cert.pem", keyfile="key.pem")
+      httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
+    else:
+      httpd = http.server.HTTPServer(('localhost', 8000), CustomHTTPRequestHandler)
     # message
-    print("\n------=< openFPGALoader online >=------")
-    print("Serving openFPGALoader on https://localhost:4443")
+    print("\n\033[1;97m------=< openFPGALoader online >=------\033[0m")
+    print("Serving openFPGALoader on \033[1;97mhttps://localhost:4443\033[0m")
     print("Open this URL with a broswer supporting WebUSB (e.g. Chrome)")
-    print("This will let you program your board directly.")
+    print("This will let you configure your board directly.")
+    print("\033[1;97mCtrl+C to exit\033[0m")
+    print("Your browser will issue a warning regarding certificates.")
     httpd.serve_forever()
 
 def serve_openFPGALoader(board,bitstream):
@@ -147,7 +152,7 @@ def serve_openFPGALoader(board,bitstream):
     </script>
 
     <script>
-    var ansiText = "\\n\\033[1;97mPlease wait, the console is not refreshed during uploads.\\033[0m\\n\\n";
+    var ansiText = "\\n\\033[1;97mIn progress ... please wait, the console is not refreshed during uploads...\\033[0m\\n\\n";
     var Module = {
       preRun: [function() {  }],
       'print': function(text)    {
