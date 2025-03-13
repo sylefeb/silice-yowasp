@@ -1,6 +1,7 @@
 ISC License
 
-Copyright (C) Catherine <whitequark@whitequark.org>
+Copyright (C) Catherine <whitequark@whitequark.org> (code from yowasp project)
+Copyright (C) sylefeb   <sylefeb@antexel.com> (code for Silice port)
 
 Permission to use, copy, modify, and/or distribute this software for any
 purpose with or without fee is hereby granted, provided that the above
