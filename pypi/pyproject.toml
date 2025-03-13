@@ -8,7 +8,7 @@ dynamic = ["version"]
 name = "yowasp-silice"
 description = "Silice HDL"
 readme = "README.md"
-authors = [{name = "sylefeb", email = "sylain.lefebvre@inria.fr"},
+authors = [{name = "sylefeb", email = "sylefeb@antexel.com"},
            {name = "Catherine", email = "whitequark@whitequark.org"}]
 license = {text = "ISC"}
 classifiers = [
