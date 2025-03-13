@@ -99,10 +99,10 @@ def serve(html_content):
     # create localhost
     httpd = http.server.HTTPServer(('localhost', 4443), CustomHTTPRequestHandler)
     # wrap the server with SSL for HTTPS
-    httpd.socket = ssl.wrap_socket(httpd.socket,
-                               keyfile='key.pem',
-                               certfile='cert.pem',
-                               server_side=True)
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_cert_chain(certfile="cert.pem", keyfile="key.pem")
+    httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
+    # message
     print("\n------=< openFPGALoader online >=------")
     print("Serving openFPGALoader on https://localhost:4443")
     print("Open this URL with a broswer supporting WebUSB (e.g. Chrome)")
@@ -124,21 +124,30 @@ def serve_openFPGALoader(board,bitstream):
         background: black;
         color: gray;
       }
-      </style>
+      .button {
+        background-color: #f0f0f0;
+        border: none;
+        color: black;
+        padding: 15px 32px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        border-radius: 8px;
+      }
+    </style>
     </head>
     <body style="background-color: black;">
-    <button id="selectAndProgramDevice">Select your FPGA device</button>
+    <button class="button" id="selectAndProgramDevice">Click to select your FPGA device</button>
     <pre id="txtfield"></pre>
 
     <script type="module">
     import { AnsiUp } from 'https://cdn.jsdelivr.net/npm/ansi_up@6.0.2/ansi_up.min.js';
     window.ansiUp = new AnsiUp();
-    //var result = window.ansiUp.ansi_to_html('\x1b[31mHello, world!\x1b[39m');
-    //console.log(result);
     </script>
 
     <script>
-    var ansiText = "";
+    var ansiText = "\\n\\033[1;97mPlease wait, the console is not refreshed during uploads.\\033[0m\\n\\n";
     var Module = {
       preRun: [function() {  }],
       'print': function(text)    {
