@@ -1,6 +1,14 @@
+import os
 import sys
 import yowasp_runtime
 from . import silice_make
+import requests
+import tarfile
+import http.server
+import ssl
+import subprocess
+import shutil
+import mimetypes
 
 try:
     from importlib import resources as importlib_resources
@@ -18,6 +26,170 @@ def run_silice(argv):
 
 def run_make(argv):
     silice_make.make(argv)
+
+import os
+import requests
+
+def download_file(url, filename):
+    if os.path.exists(filename):
+        print(f"File '{filename}' already exists. Skipping download.")
+        return 1
+    response = requests.get(url, stream=True)
+    if response.status_code == 200:
+        total_size = int(response.headers.get("content-length", 0))  # Get file size if available
+        chunk_size = 1024  # 1 KB chunks
+        downloaded = 0  # Track progress
+        with open(filename, "wb") as file:
+            for chunk in response.iter_content(chunk_size=chunk_size):
+                file.write(chunk)
+                downloaded += len(chunk)
+
+                # Print progress bar
+                if total_size > 0:  # Only show if size is known
+                    percent = (downloaded / total_size) * 100
+                    bar_length = 40  # Length of the progress bar
+                    filled_length = int(bar_length * downloaded / total_size)
+                    bar = "█" * filled_length + "-" * (bar_length - filled_length)
+                    print(f"\r[{bar}] {percent:.2f}% ", end="", flush=True)
+        return 1
+    else:
+        print(f"Failed to download {filename} from {url} (code: {response.status_code}).")
+        return 0
+
+def get_openFPGALoader():
+    print("downloading openFPGALoader-online ...")
+    url = "https://github.com/sylefeb/openFPGALoader-online/releases/download/bucket-linux-x64/release.tgz"
+    download_file(url,"ofl.tgz")
+    with tarfile.open("ofl.tgz", "r:gz") as tar:
+        tar.extractall(".")
+
+def generate_self_signed_cert(certfile='cert.pem', keyfile='key.pem'):
+    subprocess.run(['openssl', 'genpkey', '-algorithm', 'RSA', '-out', keyfile], check=True)
+    subprocess.run(['openssl', 'req', '-new', '-key', keyfile, '-out', 'cert.csr', '-subj', '/CN=localhost'], check=True)
+    subprocess.run(['openssl', 'x509', '-req', '-in', 'cert.csr', '-signkey', keyfile, '-out', certfile], check=True)
+    os.remove('cert.csr')
+
+def serve(html_content):
+    class CustomHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == '/':
+                # Respond with the HTML content
+                self.send_response(200)
+                self.send_header('Content-type', 'text/html')
+                self.end_headers()
+                self.wfile.write(html_content.encode('utf-8'))
+            else:
+                # Respond with the file content
+                file_path = self.path.lstrip('/')
+                if os.path.isfile(file_path):
+                    content_type, _ = mimetypes.guess_type(file_path)
+                    content_type = content_type or 'application/octet-stream'
+                    try:
+                        with open(file_path, 'rb') as f:
+                            file_content = f.read()
+                        self.send_response(200)
+                        self.send_header('Content-type', content_type)
+                        self.end_headers()
+                        self.wfile.write(file_content)
+                    except Exception as e:
+                        self.send_error(500, f"Internal Server Error: {str(e)}")
+    # make certificates
+    if not os.path.exists('cert.pem'):
+        generate_self_signed_cert()
+    # create localhost
+    httpd = http.server.HTTPServer(('localhost', 4443), CustomHTTPRequestHandler)
+    # wrap the server with SSL for HTTPS
+    httpd.socket = ssl.wrap_socket(httpd.socket,
+                               keyfile='key.pem',
+                               certfile='cert.pem',
+                               server_side=True)
+    print("\n------=< openFPGALoader online >=------")
+    print("Serving openFPGALoader on https://localhost:4443")
+    print("Open this URL with a broswer supporting WebUSB (e.g. Chrome)")
+    print("This will let you program your board directly.")
+    httpd.serve_forever()
+
+def serve_openFPGALoader(board,bitstream):
+    get_openFPGALoader()
+    html_page ="""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <title>FPGA programming page</title>
+      <style type="text/css">
+      pre {
+        margin: 0;
+        font-family: monaco, "Courier New", Courier, monospace;
+        line-height: 1.3;
+        background: black;
+        color: gray;
+      }
+      </style>
+    </head>
+    <body style="background-color: black;">
+    <button id="selectAndProgramDevice">Select your FPGA device</button>
+    <pre id="txtfield"></pre>
+
+    <script type="module">
+    import { AnsiUp } from 'https://cdn.jsdelivr.net/npm/ansi_up@6.0.2/ansi_up.min.js';
+    window.ansiUp = new AnsiUp();
+    //var result = window.ansiUp.ansi_to_html('\x1b[31mHello, world!\x1b[39m');
+    //console.log(result);
+    </script>
+
+    <script>
+    var ansiText = "";
+    var Module = {
+      preRun: [function() {  }],
+      'print': function(text)    {
+        ansiText += text + "\\r\\n";
+        niceText = window.ansiUp.ansi_to_html(ansiText);
+        console.log(niceText);
+        document.getElementById("txtfield").innerHTML = niceText;
+        console.log(':: ' + text)
+      },
+      'printErr': function(text) {
+        ansiText += text + "\\r\\n";
+        niceText = window.ansiUp.ansi_to_html(ansiText);
+        console.log(niceText);
+        document.getElementById("txtfield").innerHTML = niceText;
+        console.log(':: ' + text)
+      }
+    }
+    Module['onRuntimeInitialized'] = function() {
+      // download file
+      var xhr = new XMLHttpRequest();
+      xhr.open("GET", '""" + bitstream + """');
+      xhr.responseType = "arraybuffer";
+      xhr.overrideMimeType("application/octet-stream");
+      xhr.onload = function () {
+        if (this.status === 200) {
+          FS.writeFile('/bitstream.bit', new Uint8Array(xhr.response), { encoding: "binary" });
+          console.log("bitstream loaded")
+        }
+      };
+      xhr.send();
+    }
+    function assert() {}
+    </script>
+
+    <script src=release/openFPGALoader.js></script>
+    <script>
+        // Request access to a USB device
+        document.getElementById('selectAndProgramDevice').addEventListener('click', async () => {
+          try {
+            const device = await navigator.usb.requestDevice({ filters: [] });
+            console.log(`Selected device: ${device.productName}`);
+            Module.callMain(['-b','"""+board+"""','/bitstream.bit'])
+          } catch (err) {
+            console.error(`Error: ${err}`);
+          }
+        });
+    </script>
+    </body>
+    </html>
+    """
+    serve(html_page)
 
 def _run_silice_argv():
     sys.exit(run_silice(sys.argv[1:]))
