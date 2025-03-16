@@ -140,6 +140,10 @@ def serve_openFPGALoader(board,bitstream):
         font-size: 16px;
         border-radius: 8px;
       }
+      .button:hover {
+        background-color: #a9a9a9;
+        color: white;
+      }
     </style>
     </head>
     <body style="background-color: black;">
