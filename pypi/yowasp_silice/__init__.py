@@ -107,7 +107,7 @@ def serve(html_content):
       httpd = http.server.HTTPServer(('localhost', 8000), CustomHTTPRequestHandler)
     # message
     print("\n\033[1;97m------=< openFPGALoader online >=------\033[0m")
-    print("Serving openFPGALoader on \033[1;97mhttps://localhost:4443\033[0m")
+    print("Serving openFPGALoader on \033[1;97mhttp://localhost:8000\033[0m")
     print("Open this URL with a broswer supporting WebUSB (e.g. Chrome)")
     print("This will let you configure your board directly.")
     print("\033[1;97mCtrl+C to exit\033[0m")
